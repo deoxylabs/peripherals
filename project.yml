@@ -1,0 +1,71 @@
+name: Peripherals
+options:
+  bundleIdPrefix: com.deoxylabs
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "6.0"
+    # Your Apple team ID, from the environment (install.sh reads Local.env).
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  # The Razer keyboard and mouse without Synapse: lighting, the keyboard's
+  # OLED, and both going dark while the displays sleep.
+  Peripherals:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: Resources
+        buildPhase: resources
+      # launchd keeps the app alive from a plist inside its own bundle, which
+      # is what SMAppService.agent registers.
+      - path: Support/com.deoxylabs.peripherals.plist
+        buildPhase:
+          copyFiles:
+            destination: wrapper
+            subpath: Contents/Library/LaunchAgents
+    info:
+      path: Support/Info.plist
+      properties:
+        CFBundleDisplayName: Peripherals
+        LSUIElement: true
+        LSMinimumSystemVersion: "26.0"
+        NSHumanReadableCopyright: Deoxy Labs
+        NSAppleEventsUsageDescription: Peripherals reads the current track and its artwork from Music to show them on the keyboard.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.deoxylabs.peripherals
+        PRODUCT_NAME: Peripherals
+        ENABLE_APP_SANDBOX: false
+        ENABLE_HARDENED_RUNTIME: true
+        CODE_SIGN_ENTITLEMENTS: Support/Peripherals.entitlements
+
+  PeripheralsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Peripherals
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Peripherals.app/Contents/MacOS/Peripherals
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  Peripherals:
+    build:
+      targets:
+        Peripherals: all
+        PeripheralsTests: [test]
+    test:
+      targets:
+        - PeripheralsTests
