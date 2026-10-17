@@ -38,6 +38,7 @@ final class OledController: @unchecked Sendable {
     private var shown: String?            // what the screen was last told to show
     private var onSlot: String?           // the track id the image slot holds
     private var retryAt = Date.distantPast
+    private var screensaverSynced = false
 
     /// Reports what's on screen, for the menu.
     var onStatus: (@Sendable (String) -> Void)?
@@ -59,12 +60,12 @@ final class OledController: @unchecked Sendable {
         }
     }
 
-    func setMode(_ value: Mode) { queue.async { [self] in mode = value; tick() } }
+    func setMode(_ value: Mode) { queue.async { [self] in mode = value; screensaverSynced = false; tick() } }
     func setDark(_ value: Bool) { queue.async { [self] in dark = value; shown = nil; tick() } }
     func setMusic(_ value: MusicWatcher.Now) { queue.async { [self] in music = value; tick() } }
 
     /// Whatever the keyboard was showing may be gone after a reconnect.
-    func deviceAppeared() { queue.async { [self] in shown = nil; tick() } }
+    func deviceAppeared() { queue.async { [self] in shown = nil; screensaverSynced = false; tick() } }
 
     /// Razer's own animation again, rather than a clock frozen at this minute.
     func restoreAndStop() {
@@ -93,6 +94,7 @@ final class OledController: @unchecked Sendable {
     private func tick() {
         let connected = hub.connected
         guard connected.contains(.keyboard), connected.contains(.oled) else { return }
+        if !screensaverSynced { syncScreensaver() }
         if dark { return show("off") { hub.send(.keyboard, setting(0x0D, [7, 7])) } }
 
         switch mode {
@@ -166,6 +168,20 @@ final class OledController: @unchecked Sendable {
         }
         UserDefaults.standard.set(key, forKey: "clockBackgrounds")
         Log.oled.notice("clock backgrounds for \(key, privacy: .public)")
+    }
+
+    /// The firmware's own screensaver takes over the screen once the keyboard
+    /// has been idle long enough to dim, whatever we set. It's off while we
+    /// drive the screen and back on for Razer's animation. The dimming stays,
+    /// which is what protects the panel. The setting lives in the keyboard's
+    /// flash, so it's read first and only written when it differs.
+    private func syncScreensaver() {
+        let wanted: UInt8 = mode == .razer ? 1 : 0
+        guard let current = hub.query(.keyboard, 0x17, 0x96, size: 2) else { return }
+        screensaverSynced = true
+        guard current[0] != wanted else { return }
+        hub.send(.keyboard, setting(0x16, [wanted, max(current[1], 1)]))
+        Log.oled.notice("firmware screensaver \(wanted == 1 ? "on" : "off", privacy: .public)")
     }
 
     private func show(_ name: String, _ apply: () -> Void) {
