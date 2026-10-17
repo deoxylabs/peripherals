@@ -46,4 +46,4 @@ The tests pin the wire formats against values captured from the original prototy
 
 ## Licence
 
-No licence yet: all rights reserved. Razer, BlackWidow, Basilisk and Synapse are trademarks of Razer Inc.; this project isn't affiliated with Razer.
+[MIT](LICENSE). The deoxy wordmark in `Resources/` is a Deoxy Labs trademark and isn't covered by it; swap it out in your own builds. Razer, BlackWidow, Basilisk and Synapse are trademarks of Razer Inc.; this project isn't affiliated with Razer.
