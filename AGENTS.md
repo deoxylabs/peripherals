@@ -40,6 +40,7 @@ The classes shared across threads are `@unchecked Sendable` and confine their st
 - **Frame writes are never acknowledged,** and devices silently drop what they show. Resend unchanged lighting frames every few seconds.
 - **The 0x09 live buffer has fixed slots by item id,** not a list.
 - **The keyboard's idle timers count keypresses only,** so they'd dim, blank and screensave the OLED while the mouse is in use. `FirmwarePolicy` switches them off while the app drives the screen and restores the keyboard's own values on Quit or in Razer mode. It reads before writing, because they're flash settings. Idleness comes from the Mac (`SystemStats.idleSeconds`, any input device). `OledController.watchdog` re-applies the home screen if anything replaces it.
+- **A still home image (type 1) goes black after a while** while 0x8D still reports it, and keypresses don't wake it. Selecting it again (0x02 + 0x0D, same values) brings it back, so `showTrack` re-selects it every 20 s. The clock (type 6) redraws every second and isn't affected.
 - **TCC:** a launchd agent may not show permission prompts, and on Macs with AMFI relaxed nothing non-Apple-signed may. So:
   - AppleScript goes through `/usr/bin/osascript` with responsibility disclaimed.
   - Input Monitoring is requested from the hand-opened copy. The agent retries opens and needs a restart once it's granted, because IOKit caches the denial.

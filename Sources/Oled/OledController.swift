@@ -21,6 +21,7 @@ final class OledController: @unchecked Sendable {
     }
 
     static let pauseGrace = 60.0          // a paused track stays up this long
+    static let trackReassert = 20.0       // see showTrack
     static let imageSlot: UInt8 = 0
     /// Bump when the clock backgrounds change, so they're uploaded again.
     static let backgroundDesign = 1
@@ -40,6 +41,7 @@ final class OledController: @unchecked Sendable {
     private var retryAt = Date.distantPast
     private var policyCheckedAt = Date.distantPast
     private var watchdogAt = Date.distantPast
+    private var trackAssertedAt = Date.distantPast
     private var brightness = 1.0          // the menu's slider
 
     /// Reports what's on screen, for the menu.
@@ -156,9 +158,14 @@ final class OledController: @unchecked Sendable {
             shown = nil
             Log.oled.notice("now playing: \(track.name, privacy: .public) - \(track.artist, privacy: .public)")
         }
+        // A still image goes black after a while even though the keyboard
+        // still reports it as the home screen, and keypresses don't bring it
+        // back; selecting it again does. Same values, so no flash write.
+        if Date().timeIntervalSince(trackAssertedAt) > Self.trackReassert { shown = nil }
         show("track") {
             hub.send(.keyboard, setting(0x02, [1, Self.imageSlot + 1] + [UInt8](repeating: 0, count: 17)))
             hub.send(.keyboard, setting(0x0D, [1, 1]))
+            trackAssertedAt = Date()
         }
         onStatus?("\(track.name) — \(track.artist)")
     }
