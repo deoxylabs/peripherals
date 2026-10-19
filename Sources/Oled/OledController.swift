@@ -146,7 +146,7 @@ final class OledController: @unchecked Sendable {
         if onSlot != track.id {
             guard Date() >= retryAt else { return }
             let data = MusicWatcher.artwork()
-            let frame = Screens.nowPlaying(track, cover: data.flatMap { Artwork.cover($0) })
+            let frame = Screens.nowPlaying(track, backdrop: data.flatMap { Artwork.ambient($0) })
             do {
                 try link.upload(command: 0x12, index: Self.imageSlot, image: frame)
             } catch {

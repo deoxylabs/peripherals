@@ -14,19 +14,21 @@ enum Screens {
         var album: String
     }
 
-    /// Cover on the left, then title, artist and album.
-    static func nowPlaying(_ track: Track, cover: GreyImage?) -> GreyImage {
+    /// The cover's own glow across the panel, the cover sharp on the left,
+    /// then title, artist and album. `backdrop` is `Artwork.ambient`'s.
+    static func nowPlaying(_ track: Track, backdrop: GreyImage?) -> GreyImage {
         let canvas = Canvas(width: width, height: height)
-        if let cover { canvas.paste(cover, x: 0, y: 0) }
-        let left: CGFloat = 72
-        let room = CGFloat(width) - left - 2
-        let (title, titleFont) = Typeface.fit(track.name, sizes: [15, 14, 13], weight: .bold, grey: 1, width: room)
-        let (artist, artistFont) = Typeface.fit(track.artist, sizes: [12, 11], weight: .regular, grey: 170 / 255, width: room)
-        canvas.text(title, x: left, top: 9, font: titleFont)
-        canvas.text(artist, x: left, top: 29, font: artistFont)
+        if let backdrop { canvas.paste(backdrop, x: 0, y: 0) }
+        let left: CGFloat = 68
+        let room = CGFloat(width) - left - 4
+        let (title, titleFont) = Typeface.fit(track.name, sizes: [16, 15, 14], weight: .bold, grey: 1, width: room)
+        let (artist, artistFont) = Typeface.fit(track.artist, sizes: [12, 11, 10], weight: .medium, grey: 200 / 255, width: room)
+        canvas.text(title, x: left, top: 8, font: titleFont)
+        canvas.text(artist, x: left, top: 28, font: artistFont)
         if !track.album.isEmpty, track.album != track.name {
-            let (album, albumFont) = Typeface.fit(track.album, sizes: [10], weight: .regular, grey: 90 / 255, width: room)
-            canvas.text(album, x: left, top: 45, font: albumFont)
+            let (album, albumFont) = Typeface.fit(track.album.uppercased(), sizes: [8], weight: .semibold,
+                                                  grey: 150 / 255, width: room, tracking: 0.8)
+            canvas.text(album, x: left, top: 47, font: albumFont)
         }
         return canvas.image
     }

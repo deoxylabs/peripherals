@@ -88,10 +88,11 @@ enum Typeface {
         NSFont.systemFont(ofSize: size, weight: weight) as CTFont
     }
 
-    static func line(_ text: String, _ font: CTFont, grey: CGFloat) -> CTLine {
+    static func line(_ text: String, _ font: CTFont, grey: CGFloat, tracking: CGFloat = 0) -> CTLine {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: CGColor(gray: grey, alpha: 1),
+            .kern: tracking,
         ]
         return CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))
     }
@@ -102,15 +103,15 @@ enum Typeface {
 
     /// The largest size the text fits at, or the smallest with an ellipsis.
     static func fit(_ text: String, sizes: [CGFloat], weight: NSFont.Weight, grey: CGFloat,
-                    width limit: CGFloat) -> (CTLine, CTFont) {
+                    width limit: CGFloat, tracking: CGFloat = 0) -> (CTLine, CTFont) {
         for size in sizes {
             let font = font(size, weight)
-            let line = line(text, font, grey: grey)
+            let line = line(text, font, grey: grey, tracking: tracking)
             if width(line) <= limit { return (line, font) }
         }
         let font = font(sizes.last!, weight)
-        let token = line("…", font, grey: grey)
-        let truncated = CTLineCreateTruncatedLine(line(text, font, grey: grey), Double(limit), .end, token)
+        let token = line("…", font, grey: grey, tracking: tracking)
+        let truncated = CTLineCreateTruncatedLine(line(text, font, grey: grey, tracking: tracking), Double(limit), .end, token)
         return (truncated ?? token, font)
     }
 }
@@ -121,15 +122,58 @@ enum Artwork {
         return CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
-    /// The cover in 16 greys: stretched so it uses the whole range (one per
-    /// cent clipped at each end), then dithered to the levels the panel has.
-    static func cover(_ data: Data, size: Int = 64) -> GreyImage? {
+    /// The now-playing backdrop: the cover blown up across the panel, blurred
+    /// and dimmed to a glow, with the cover itself sharp on the left, all
+    /// dithered to the panel's 16 greys. Text goes on top undithered.
+    static func ambient(_ data: Data, width: Int = Screens.width, height: Int = Screens.height,
+                        coverSize: Int = 56, inset: Int = 4) -> GreyImage? {
         guard let image = cgImage(data) else { return nil }
-        let canvas = Canvas(width: size, height: size)
-        canvas.context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
-        var pixels = canvas.image.pixels.map(Float.init)
-        autocontrast(&pixels, cutoff: 0.01)
-        return GreyImage(width: size, height: size, pixels: dither(pixels, width: size, height: size))
+        // Aspect-fill a square as wide as the panel, blur it, keep the middle band.
+        let square = Canvas(width: width, height: width)
+        let scale = CGFloat(width) / CGFloat(min(image.width, image.height))
+        let drawn = CGSize(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
+        square.context.draw(image, in: CGRect(x: (CGFloat(width) - drawn.width) / 2, y: (CGFloat(width) - drawn.height) / 2,
+                                              width: drawn.width, height: drawn.height))
+        var glow = blur(square.image.pixels.map(Float.init), width: width, height: width, radius: 6, passes: 3)
+        let top = (width - height) / 2
+        glow = Array(glow[top * width..<(top + height) * width])
+        autocontrast(&glow, cutoff: 0)
+        var pixels = glow.map { $0 * 0.28 }
+
+        let sharp = Canvas(width: coverSize, height: coverSize)
+        sharp.context.draw(image, in: CGRect(x: 0, y: 0, width: coverSize, height: coverSize))
+        var cover = sharp.image.pixels.map(Float.init)
+        autocontrast(&cover, cutoff: 0.01)
+        for row in 0..<coverSize {
+            for column in 0..<coverSize {
+                pixels[(inset + row) * width + inset + column] = cover[row * coverSize + column]
+            }
+        }
+        return GreyImage(width: width, height: height, pixels: dither(pixels, width: width, height: height))
+    }
+
+    /// Repeated box blurs, which come out close to a Gaussian.
+    static func blur(_ input: [Float], width: Int, height: Int, radius: Int, passes: Int) -> [Float] {
+        var p = input
+        var tmp = [Float](repeating: 0, count: p.count)
+        let span = Float(2 * radius + 1)
+        for _ in 0..<passes {
+            for y in 0..<height {
+                for x in 0..<width {
+                    var sum: Float = 0
+                    for k in -radius...radius { sum += p[y * width + min(width - 1, max(0, x + k))] }
+                    tmp[y * width + x] = sum / span
+                }
+            }
+            for y in 0..<height {
+                for x in 0..<width {
+                    var sum: Float = 0
+                    for k in -radius...radius { sum += tmp[min(height - 1, max(0, y + k)) * width + x] }
+                    p[y * width + x] = sum / span
+                }
+            }
+        }
+        return p
     }
 
     static func autocontrast(_ pixels: inout [Float], cutoff: Float) {

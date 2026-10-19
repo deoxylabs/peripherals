@@ -1,4 +1,5 @@
 import XCTest
+import ImageIO
 @testable import Peripherals
 
 /// Expected values come from the Python prototypes (razeroled.py, razerlight.py),
@@ -52,11 +53,27 @@ final class ProtocolTests: XCTestCase {
     }
 
     func testFramesAreTheRightSize() {
-        let frame = Screens.nowPlaying(.init(id: "x", name: "never do", artist: "Olivia Rodrigo", album: "GUTS"), cover: nil)
+        let frame = Screens.nowPlaying(.init(id: "x", name: "never do", artist: "Olivia Rodrigo", album: "GUTS"), backdrop: nil)
         XCTAssertEqual(frame.width, 232)
         XCTAssertEqual(frame.packed().count, 232 * 64 / 2)
         XCTAssertTrue(frame.pixels.contains { $0 > 200 }, "title should be drawn in white")
         XCTAssertEqual(BootAnimation.frame(1.0).packed().count, 0x2000)
+    }
+
+    func testAmbientBackdropFillsThePanelInPanelLevels() throws {
+        let canvas = Canvas(width: 300, height: 300)
+        canvas.context.setFillColor(gray: 0.8, alpha: 1)
+        canvas.context.fill(CGRect(x: 0, y: 0, width: 150, height: 300))
+        let data = NSMutableData()
+        let image = try XCTUnwrap(canvas.context.makeImage())
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let backdrop = try XCTUnwrap(Artwork.ambient(data as Data))
+        XCTAssertEqual(backdrop.width, 232)
+        XCTAssertEqual(backdrop.pixels.count, 232 * 64)
+        XCTAssertTrue(backdrop.pixels.allSatisfy { $0 % 17 == 0 })
+        XCTAssertTrue(backdrop.pixels[100] > 0, "the glow should reach past the cover")
     }
 
     func testDitherOnlyUsesPanelLevels() {
