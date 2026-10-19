@@ -29,6 +29,9 @@ enum FirmwarePolicy {
         // Minutes until the OLED dims; Synapse's "off" is 0.
         Setting(name: "OLED dim", commandClass: 0x17, get: 0x86, set: 0x06, size: 1,
                 owned: { _ in [0] }, factory: [4]),
+        // A second OLED idle timer in minutes, off on this keyboard; kept off.
+        Setting(name: "OLED timer", commandClass: 0x17, get: 0x85, set: 0x05, size: 1,
+                owned: { _ in [0] }, factory: [0]),
         // [mode, item]: mode 0 is Synapse's "No screensaver".
         Setting(name: "OLED screensaver", commandClass: 0x17, get: 0x96, set: 0x16, size: 2,
                 owned: { [0, max($0[1], 1)] }, factory: [1, 1]),

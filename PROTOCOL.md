@@ -73,6 +73,7 @@ A getter's id is its setter's id + 0x80.
 | 0x02 | `[type, 18 bytes]` | per-type parameters (below) |
 | 0x03 | `[brightness]` | OLED brightness, 0–100 |
 | 0x04 | `[seconds]` | time from a dial/menu screen back to the home screen |
+| 0x05 | `[minutes]` | a second OLED idle timer, stored as seconds (getter 0x85 divides by 60); 0 off |
 | 0x06 | `[minutes]` | dim the OLED after this long without a keypress; **0 = never** (Synapse's "off"). Stored as seconds, so the getter 0x86 divides by 60 |
 | 0x16 | `[mode, item]` | the firmware's screensaver after the OLED dims: mode 1 on, 0 off (Synapse's "No screensaver"); item picks what it shows |
 | 0x09 | 40 bytes | live system-info values, RAM only (below) |

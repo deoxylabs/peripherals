@@ -74,6 +74,7 @@ final class FirmwarePolicyTests: XCTestCase {
 
     func testOwnedValuesSwitchTheTimersOff() {
         XCTAssertEqual(setting("OLED dim").owned([4]), [0])
+        XCTAssertEqual(setting("OLED timer").owned([5]), [0])
         XCTAssertEqual(setting("OLED screensaver").owned([1, 3]), [0, 3])
         XCTAssertEqual(setting("OLED screensaver").owned([1, 0]), [0, 1])
         XCTAssertEqual(setting("auto sleep").owned([0, 1]), [0, 0])

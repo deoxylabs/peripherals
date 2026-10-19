@@ -41,7 +41,6 @@ final class OledController: @unchecked Sendable {
     private var policyCheckedAt = Date.distantPast
     private var watchdogAt = Date.distantPast
     private var brightness = 1.0          // the menu's slider
-    private var idle = false              // nobody has touched the Mac for a while
 
     /// Reports what's on screen, for the menu.
     var onStatus: (@Sendable (String) -> Void)?
@@ -79,16 +78,10 @@ final class OledController: @unchecked Sendable {
 
     func setBrightness(_ value: Double) { queue.async { [self] in brightness = value; applyBrightness() } }
 
-    /// Dimmed while the Mac has been idle, so a static screen isn't left at
-    /// full brightness; the Mac's idle time counts every input device, where
-    /// the keyboard's own timer only ever saw keypresses.
-    func setIdle(_ value: Bool) { queue.async { [self] in idle = value; applyBrightness() } }
-
     /// Razer's own animation again, rather than a clock frozen at this minute.
     func restoreAndStop() {
         queue.sync { [self] in
             timer?.cancel()
-            idle = false
             applyBrightness()
             FirmwarePolicy.apply(own: false, hub: hub)
             hub.send(.keyboard, setting(0x0D, [0, 0]))
@@ -214,9 +207,11 @@ final class OledController: @unchecked Sendable {
         self.shown = nil
     }
 
+    /// No idle dimming here: on this panel anything much below full reads as
+    /// black, which is the very thing the app is meant to stop. Display sleep
+    /// still turns the screen off.
     private func applyBrightness() {
-        let level = brightness * (idle ? 0.25 : 1)
-        hub.send(.keyboard, setting(0x03, [UInt8(max(1, min(100, (level * 100).rounded())))]))
+        hub.send(.keyboard, setting(0x03, [UInt8(max(1, min(100, (brightness * 100).rounded())))]))
     }
 
     private func show(_ name: String, _ apply: () -> Void) {

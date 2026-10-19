@@ -140,7 +140,7 @@ final class Model: ObservableObject {
         }
         // Idle is the Mac's idea of it, which counts the mouse too. The
         // keyboard's own timers only see keypresses, so they're switched off
-        // (FirmwarePolicy) and this decides when things dim instead.
+        // (FirmwarePolicy) and this decides when the keys dim instead.
         Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.checkIdle() }
         }
@@ -196,7 +196,6 @@ final class Model: ObservableObject {
         guard now != idle else { return }
         idle = now
         lighting.setIdle(now)
-        oled.setIdle(now)
         Log.app.notice("\(now ? "idle" : "active", privacy: .public)")
     }
 
