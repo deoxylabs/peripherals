@@ -19,7 +19,7 @@ enum Screens {
     static func nowPlaying(_ track: Track, backdrop: GreyImage?) -> GreyImage {
         let canvas = Canvas(width: width, height: height)
         if let backdrop { canvas.paste(backdrop, x: 0, y: 0) }
-        // Everything sits a few pixels high: the panel is read from above
+        // The text sits a few pixels high (the cover stays centred): the panel is read from above
         // and at an angle, where centred looks low.
         let left: CGFloat = 68
         let room = CGFloat(width) - left - 4
