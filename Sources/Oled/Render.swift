@@ -126,7 +126,7 @@ enum Artwork {
     /// and dimmed to a glow, with the cover itself sharp on the left, all
     /// dithered to the panel's 16 greys. Text goes on top undithered.
     static func ambient(_ data: Data, width: Int = Screens.width, height: Int = Screens.height,
-                        coverSize: Int = 56, inset: Int = 4) -> GreyImage? {
+                        coverSize: Int = 56, inset: Int = 4, top coverTop: Int = 1) -> GreyImage? {
         guard let image = cgImage(data) else { return nil }
         // Aspect-fill a square as wide as the panel, blur it, keep the middle band.
         let square = Canvas(width: width, height: width)
@@ -146,7 +146,7 @@ enum Artwork {
         autocontrast(&cover, cutoff: 0.01)
         for row in 0..<coverSize {
             for column in 0..<coverSize {
-                pixels[(inset + row) * width + inset + column] = cover[row * coverSize + column]
+                pixels[(coverTop + row) * width + inset + column] = cover[row * coverSize + column]
             }
         }
         return GreyImage(width: width, height: height, pixels: dither(pixels, width: width, height: height))
