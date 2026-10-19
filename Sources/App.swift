@@ -71,12 +71,13 @@ final class Model: ObservableObject {
         didSet {
             UserDefaults.standard.set(lightBrightness, forKey: "lightBrightness")
             lighting.setBrightness(lightBrightness)
+        oled.setBrightness(screenBrightness)
         }
     }
     @Published var screenBrightness: Double {
         didSet {
             UserDefaults.standard.set(screenBrightness, forKey: "screenBrightness")
-            hub.send(.keyboard, RazerReport.make(0x17, 0x03, [UInt8(screenBrightness * 100)]))
+            oled.setBrightness(screenBrightness)
         }
     }
 
@@ -137,6 +138,12 @@ final class Model: ObservableObject {
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refreshBatteries() }
         }
+        // Idle is the Mac's idea of it, which counts the mouse too. The
+        // keyboard's own timers only see keypresses, so they're switched off
+        // (FirmwarePolicy) and this decides when things dim instead.
+        Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.checkIdle() }
+        }
         Log.app.notice("started (agent: \(Service.isAgent, privacy: .public))")
     }
 
@@ -179,6 +186,18 @@ final class Model: ObservableObject {
         lighting.restAndStop()
         oled.restoreAndStop()
         NSApp.terminate(nil)
+    }
+
+    private var idle = false
+    static let idleAfter: Double = 10 * 60
+
+    private func checkIdle() {
+        let now = SystemStats.idleSeconds() >= Self.idleAfter
+        guard now != idle else { return }
+        idle = now
+        lighting.setIdle(now)
+        oled.setIdle(now)
+        Log.app.notice("\(now ? "idle" : "active", privacy: .public)")
     }
 
     private func setDisplaysAsleep(_ asleep: Bool) {

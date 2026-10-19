@@ -64,3 +64,26 @@ final class ProtocolTests: XCTestCase {
         XCTAssertTrue(Artwork.dither(ramp, width: 64, height: 1).allSatisfy { $0 % 17 == 0 })
     }
 }
+
+/// The firmware settings the app takes over: its values must switch the
+/// feature off and leave every byte it doesn't own as the keyboard had it.
+final class FirmwarePolicyTests: XCTestCase {
+    private func setting(_ name: String) -> FirmwarePolicy.Setting {
+        FirmwarePolicy.settings.first { $0.name == name }!
+    }
+
+    func testOwnedValuesSwitchTheTimersOff() {
+        XCTAssertEqual(setting("OLED dim").owned([4]), [0])
+        XCTAssertEqual(setting("OLED screensaver").owned([1, 3]), [0, 3])
+        XCTAssertEqual(setting("OLED screensaver").owned([1, 0]), [0, 1])
+        XCTAssertEqual(setting("auto sleep").owned([0, 1]), [0, 0])
+        XCTAssertEqual(setting("lighting dim").owned([0, 1, 0x01, 0x2C, 0x14]), [0, 0, 0x01, 0x2C, 0x14])
+    }
+
+    func testSettingsReadAndWriteTheSameClass() {
+        for s in FirmwarePolicy.settings {
+            XCTAssertEqual(s.get, s.set | 0x80, s.name)
+            XCTAssertEqual(s.factory.count, Int(s.size), s.name)
+        }
+    }
+}

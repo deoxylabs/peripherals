@@ -1,4 +1,5 @@
 import Foundation
+import IOKit
 
 /// CPU and memory percentages, worked out the way psutil does on macOS so the
 /// numbers match what the Python prototype showed.
@@ -44,5 +45,15 @@ final class SystemStats {
         let available = (UInt64(stats.free_count) + UInt64(stats.inactive_count)) * page
         return Int((Double(total - min(total, available)) / Double(total) * 100).rounded())
     }
-}
 
+    /// Seconds since the last input from any device (keyboard, mouse,
+    /// trackpad), as the window server counts it.
+    static func idleSeconds() -> Double {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOHIDSystem"))
+        guard service != 0 else { return 0 }
+        defer { IOObjectRelease(service) }
+        let value = IORegistryEntryCreateCFProperty(service, "HIDIdleTime" as CFString, kCFAllocatorDefault, 0)?
+            .takeRetainedValue() as? NSNumber
+        return (value?.doubleValue ?? 0) / 1_000_000_000
+    }
+}

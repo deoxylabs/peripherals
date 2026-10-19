@@ -39,6 +39,18 @@ The keyboard's matrix is **6 rows × 18 columns**. Columns 16 and 17 are the rig
 
 Devices drop the frame they were showing (sleep, a radio drop) without any signal, and frame writes are never acknowledged. So resend unchanged frames every few seconds.
 
+### Power, class 0x07
+
+Get id = set id + 0x80.
+
+| set | args | |
+|---|---|---|
+| 0x03 | `[seconds BE16]` | sleep after this long idle "on battery" (factory 900) |
+| 0x08 | `[?, enabled]` | auto sleep |
+| 0x0b | `[?, enabled, seconds BE16, percent]` | dim the lighting after idle (factory 300 s to 20%) |
+
+A full battery reads as *not charging* (0x84 = 0), so the keyboard runs its battery timers even on the cable. Every idle timer here, and the OLED's, counts keypresses only: mouse use never resets them.
+
 ### Battery, class 0x07
 
 | id | reply |
@@ -57,10 +69,11 @@ A getter's id is its setter's id + 0x80.
 
 | id | args | meaning |
 |---|---|---|
-| 0x0d | `[type, type]` | home screen: 0 animation, 1 image, 2 banner, 3 keyboard info, 4 emote, 5 audio, 6 system info, 7 off |
+| 0x0d | `[type, type]` (get 0x8d) | home screen: 0 animation, 1 image, 2 banner, 3 keyboard info, 4 emote, 5 audio, 6 system info, 7 off |
 | 0x02 | `[type, 18 bytes]` | per-type parameters (below) |
 | 0x03 | `[brightness]` | OLED brightness, 0–100 |
 | 0x04 | `[seconds]` | time from a dial/menu screen back to the home screen |
+| 0x06 | `[minutes]` | dim the OLED after this long without a keypress; **0 = never** (Synapse's "off"). Stored as seconds, so the getter 0x86 divides by 60 |
 | 0x16 | `[mode, item]` | the firmware's screensaver after the OLED dims: mode 1 on, 0 off (Synapse's "No screensaver"); item picks what it shows |
 | 0x09 | 40 bytes | live system-info values, RAM only (below) |
 | 0x0a | `[visualiser type, 32 bar heights]` | live audio bars in pixels, RAM only: 0–64, or 0–44 with media info shown |

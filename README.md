@@ -4,7 +4,7 @@ A small macOS menu bar app that runs a Razer **BlackWidow V4 Pro 75%** keyboard 
 
 - **Lighting.** A dim, cool white at rest. While [DuoChart](https://github.com/deoxylabs/duochart) plays, the keys show the album art and breathe on the beat; star power washes them blue. Brightness is adjustable.
 - **The keyboard's OLED.** While Apple Music plays it shows the track: the cover in 16 greys, then title, artist and album. Otherwise it shows a clock with the date and live CPU and memory figures.
-- **Sleep.** The keys, the mouse and the OLED go dark while the displays sleep, and come back on wake.
+- **Sleep and idle.** The keys, the mouse and the OLED go dark while the displays sleep, and come back on wake. After 10 minutes without input from any device they dim. The keyboard's own timers, which only count keypresses and would blank or screensave the OLED mid-use, are switched off while the app runs and restored when it quits.
 - **Batteries.** Both devices' batteries are shown in the menu bar panel.
 - **Boot animation.** A custom power-on animation for the keyboard: a spinning double helix that becomes the wordmark.
 

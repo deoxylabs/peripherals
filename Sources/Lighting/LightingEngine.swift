@@ -51,6 +51,9 @@ final class LightingEngine: @unchecked Sendable {
     private var level = 0.0                          // how far into "a song is playing" we are
     private var dark = false
     private var brightnessLevel = 1.0          // the menu's slider
+    private var idle = false                   // the Mac has been left alone
+    /// What the keys should be at right now: the slider, less while idle.
+    private var keyLevel: Double { brightnessLevel * (idle ? 0.25 : 1) }
     private var wasDark = false
 
     init(hub: DeviceHub) {
@@ -75,11 +78,21 @@ final class LightingEngine: @unchecked Sendable {
 
     /// The overall brightness, 0...1, kept separate from the colours so a
     /// dimmed keyboard still breathes on the beat.
+    /// Dimmer while nobody's using the Mac; see Model for how that's judged.
+    func setIdle(_ value: Bool) {
+        queue.async { [self] in
+            guard idle != value else { return }
+            idle = value
+            guard !dark else { return }
+            for target in targets { hub.send(target.role, brightness(keyLevel)) }
+        }
+    }
+
     func setBrightness(_ value: Double) {
         queue.async { [self] in
             brightnessLevel = max(0, min(1, value))
             guard !dark else { return }
-            for target in targets { hub.send(target.role, brightness(brightnessLevel)) }
+            for target in targets { hub.send(target.role, brightness(keyLevel)) }
         }
     }
 
@@ -88,7 +101,7 @@ final class LightingEngine: @unchecked Sendable {
         queue.async { [self] in
             guard let i = targets.firstIndex(where: { $0.role == role }) else { return }
             hub.send(role, RazerReport.make(0x0F, 0x02, [0x00, 0x00, 0x08], size: 0x0C))   // custom frame mode
-            hub.send(role, brightness(dark ? 0 : brightnessLevel))
+            hub.send(role, brightness(dark ? 0 : keyLevel))
             targets[i].lastFrame = nil
         }
     }
@@ -115,7 +128,7 @@ final class LightingEngine: @unchecked Sendable {
         if dark != wasDark {
             wasDark = dark
             for i in targets.indices {
-                hub.send(targets[i].role, brightness(dark ? 0 : brightnessLevel))
+                hub.send(targets[i].role, brightness(dark ? 0 : keyLevel))
                 targets[i].lastFrame = nil
                 targets[i].lastWrite = 0
             }
@@ -165,6 +178,11 @@ final class LightingEngine: @unchecked Sendable {
             }
         }
         if frame == target.lastFrame, now - target.lastWrite < Self.refresh { return }
+        // Brightness goes with every refresh too: the firmware dims the keys on
+        // its own timers, and a frame alone doesn't undo that.
+        if frame == target.lastFrame {
+            hub.send(target.role, brightness(dark ? 0 : keyLevel))
+        }
         target.lastFrame = frame
         target.lastWrite = now
         for (y, rgb) in frame.enumerated() {

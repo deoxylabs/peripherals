@@ -12,6 +12,7 @@ Read [README.md](README.md) for what the app does and [PROTOCOL.md](PROTOCOL.md)
 | `Sources/Service.swift` | The launchd agent via `SMAppService.agent`, single-instance hand-over, retiring the old Python LaunchAgents |
 | `Sources/HID/DeviceHub.swift` | IOHIDManager on its own run-loop thread. Opens the keyboard's interfaces 3 and 5 and the mouse's interface 0, all shared. Reconnects; retries opens that TCC refused. `send` / `query` / `sendOutput`. |
 | `Sources/HID/RazerReport.swift` | The 90-byte Razer report |
+| `Sources/HID/FirmwarePolicy.swift` | The keyboard's own idle handling (OLED dim, screensaver, auto sleep, lighting dim), switched off while the app runs and restored after |
 | `Sources/HID/OledLink.swift` | Interface-5 uploads: begin, 60-byte data packets, one ack per packet. Blocking; only call it from the OLED queue. |
 | `Sources/Lighting/` | `LightingEngine` (30 fps loop on its own queue; DuoChart UDP feed on 127.0.0.1:52737) and `ArtworkGrid` (cover → per-key colours) |
 | `Sources/Oled/` | `OledController` (state machine on its own queue, 1 Hz), `Screens` (layouts and the byte formats the firmware reads), `Render` (CoreGraphics greys, 4-bit packing, dithering), `BootAnimation` |
@@ -38,6 +39,7 @@ The classes shared across threads are `@unchecked Sendable` and confine their st
 - **The keyboard's LED matrix is 6×18.** Its own matrix query says so.
 - **Frame writes are never acknowledged,** and devices silently drop what they show. Resend unchanged lighting frames every few seconds.
 - **The 0x09 live buffer has fixed slots by item id,** not a list.
+- **The keyboard's idle timers count keypresses only,** so they'd dim, blank and screensave the OLED while the mouse is in use. `FirmwarePolicy` switches them off while the app drives the screen and restores the keyboard's own values on Quit or in Razer mode. It reads before writing, because they're flash settings. Idleness comes from the Mac (`SystemStats.idleSeconds`, any input device). `OledController.watchdog` re-applies the home screen if anything replaces it.
 - **TCC:** a launchd agent may not show permission prompts, and on Macs with AMFI relaxed nothing non-Apple-signed may. So:
   - AppleScript goes through `/usr/bin/osascript` with responsibility disclaimed.
   - Input Monitoring is requested from the hand-opened copy. The agent retries opens and needs a restart once it's granted, because IOKit caches the denial.
