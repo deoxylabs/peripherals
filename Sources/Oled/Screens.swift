@@ -15,7 +15,7 @@ enum Screens {
     }
 
     /// The cover's own glow across the panel, the cover sharp on the left,
-    /// then title, artist and album. `backdrop` is `Artwork.ambient`'s.
+    /// then title, artist and album as Music has them. `backdrop` is `Artwork.ambient`'s.
     static func nowPlaying(_ track: Track, backdrop: GreyImage?) -> GreyImage {
         let canvas = Canvas(width: width, height: height)
         if let backdrop { canvas.paste(backdrop, x: 0, y: 0) }
@@ -26,9 +26,8 @@ enum Screens {
         canvas.text(title, x: left, top: 8, font: titleFont)
         canvas.text(artist, x: left, top: 28, font: artistFont)
         if !track.album.isEmpty, track.album != track.name {
-            let (album, albumFont) = Typeface.fit(track.album.uppercased(), sizes: [8], weight: .semibold,
-                                                  grey: 150 / 255, width: room, tracking: 0.8)
-            canvas.text(album, x: left, top: 47, font: albumFont)
+            let (album, albumFont) = Typeface.fit(track.album, sizes: [10], weight: .regular, grey: 150 / 255, width: room)
+            canvas.text(album, x: left, top: 45, font: albumFont)
         }
         return canvas.image
     }
